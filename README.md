@@ -2,6 +2,9 @@
 
 This is an example Webex Device macro which lets you control a WebView Web App on your Webex Device from an in room touch controller.
 
+![image](https://github.com/wxsd-sales/webview-websocket-control-macro/assets/21026209/ed64db52-4658-4963-a692-50d54e399f6a)
+
+
 ## Overview
 
 The macro demos how you connect your Web App to a Webex Device and control it from either the Webex Devices native UI Extensions or from another Web App running on the the paired Webex Room Navigator.
