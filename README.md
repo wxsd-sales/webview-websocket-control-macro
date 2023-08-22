@@ -9,7 +9,7 @@ The macro demos how you connect your Web App to a Webex Device and control it fr
 Demo WebApps:
 
 * Blocky Bird: Simple one button game which shows a single UI Extension button controlling the character
-* Tetrix: The classic tetrix controlled using a UI Extension Navigation Widget
+* Tetris: The classic tetris controlled using a UI Extension Navigation Widget
 * YouTube: Embedded YouTube player with UI Extension playback controls
 * Whiteboard: Simply whiteboard Web App which mirrors drawings on the Room Navigator and the Webex Devices main display
 
