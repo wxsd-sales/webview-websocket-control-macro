@@ -339,7 +339,6 @@ function createPanel(state) {
     } else {
       for (let i = 0; i < content.length; i++) {
         rows = rows.concat(row(widget(`selection-${i}`, 'Button', content[i].title, 'size=4')));
-        rows = rows.concat(row);
       }
     }
   }
