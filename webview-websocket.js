@@ -57,10 +57,17 @@ const config = {
       controls: 'navigation'
     },
     {
-      title: 'YouTube 📺',
+      title: 'YouTube + UI Extension 📺',
       url: 'https://jsxapi.glitch.me/youtube.html?videoId=26Kd0VH_9e0',
       mode: 'Fullscreen',
       controls: 'playcontrols'
+    },
+    {
+      title: 'YouTube + WebView 📺',
+      url: 'https://wxsd-sales.github.io/kiosk-demos/youtubePlayer/?videoId=OTpoNebgeAk',
+      navUrl: 'https://wxsd-sales.github.io/kiosk-demos/youtubeControls',
+      mode: 'Fullscreen',
+      controls: 'webview'
     },
     {
       title: 'Whiteboard 🎨',
@@ -81,9 +88,7 @@ const config = {
 let openingWebview = false;
 let integrationViews = []
 
-xapi.Config.WebEngine.Mode.get()
-  .then(mode => init(mode))
-  .catch(error => console.warn('WebEngine not available:', JSON.stringify(error)))
+init('On')
 
 
 async function init(webengineMode) {
@@ -95,10 +100,6 @@ async function init(webengineMode) {
     xapi.Config.WebEngine.Mode.set('On');
   }
 
-  const touchController = await checkForControllers();
-  if (!touchController) {
-    return;
-  }
 
   xapi.Config.WebEngine.Features.AllowDeviceCertificate.set('True')
 
@@ -187,7 +188,8 @@ async function openWebview(content) {
     .then(result => { console.log('Webview opened on [OSD] ', JSON.stringify(result)) })
     .catch(e => console.log('Error: ' + e.message))
 
-  if (content.controls != 'duplicate') {
+  if (content.controls != 'duplicate' && content.controls != 'webview') {
+    console.log("not duplicate or webview, setting timer", content.controls)
     setTimeout(()=>{
         openingWebview = false
       },500)
@@ -195,11 +197,14 @@ async function openWebview(content) {
   }
   console.log(`Opening [${content.title}] on [Controller]`);
   
+  let url = (content.controls === 'duplicate') ? content.url : content.navUrl ;
+
+
   xapi.Command.UserInterface.WebView.Display({
     Mode: content.mode,
     Title: content.title,
     Target: 'Controller',
-    Url: content.url + "#" + hash
+    Url: url + "#" + hash
   })
     .then(result => { 
       console.log('Webview opened on [Controller] ', JSON.stringify(result))
@@ -226,7 +231,8 @@ async function processWidget(e) {
     case 'selection':
       if (e.Type != 'clicked') return
       openWebview(config.content[option]);
-      if (config.content[option].controls === 'duplicate') return;
+      const controls = config.content[option].controls;
+      if (controls === 'duplicate' || controls === 'webview') return;
       createPanel(config.content[option].controls);
       break;
     case 'close':
