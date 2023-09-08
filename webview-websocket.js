@@ -71,7 +71,7 @@ const config = {
     },
     {
       title: 'Whiteboard 🎨',
-      url: 'https://jsxapi.glitch.me/whiteboard.html',
+      url: 'https://wxsd-sales.github.io/kiosk-demos/whiteboard/',
       mode: 'Fullscreen',
       controls: 'duplicate'
     }
