@@ -6,19 +6,18 @@
  *                    	Cisco Systems
  * 
  * Version: 1-0-0
- * Released: 08/22/23
+ * Released: 11/15/23
  * 
  * This is an example Webex Device macro which lets you control a 
  * WebView Web App on your Webex Device from an in room touch controller.
  * 
  * Demo WebApps:
- * - Blocky Bird:
- *   Simple one button game which shows a single UI Extension button
- *   controlling the character
  * - Tetris:
  *   The classic tetris controlled using a UI Extension Navigation Widget
  * - YouTube:
  *   Embedded YouTube player with UI Extension playback controls
+ * - Vimoe:
+ *   Embedded Vimeo player with UI Extension playback controls
  * - Whiteboard:
  *   Simply whiteboard Web App which mirrors drawings on the Room Navigator 
  *   and the Webex Devices main display
@@ -45,12 +44,6 @@ const config = {
   },
   content: [
     {
-      title: 'Blocky Bird 🐦',    //Button name and modal tile
-      url: 'https://jsxapi.glitch.me/game1.html', // URL to be displayed
-      mode: 'Fullscreen', // Can be Fullscreen or Modal
-      controls: 'accelerate'
-    },
-    {
       title: 'Tetris 🏗️',
       url: 'https://jsxapi.glitch.me/game2.html',
       mode: 'Fullscreen',
@@ -65,9 +58,15 @@ const config = {
     {
       title: 'YouTube + WebView 📺',
       url: 'https://wxsd-sales.github.io/kiosk-demos/youtubePlayer/?videoId=OTpoNebgeAk',
-      navUrl: 'https://wxsd-sales.github.io/kiosk-demos/youtubeControls',
+      navUrl: 'https://wxsd-sales.github.io/kiosk-demos/youtubeControls/',
       mode: 'Fullscreen',
       controls: 'webview'
+    },
+    {
+      title: 'Vimeo + UI Extension 📺',
+      url: 'https://socketeer.glitch.me/vimeoTest.html',
+      mode: 'Fullscreen',
+      controls: 'playcontrols'
     },
     {
       title: 'Whiteboard 🎨',
@@ -86,9 +85,12 @@ const config = {
 **********************************************************/
 
 let openingWebview = false;
-let integrationViews = []
+let integrationViews = [];
 
-init('On')
+
+xapi.Config.WebEngine.Mode.get()
+  .then(mode => init(mode))
+  .catch(error => console.warn('WebEngine not available:', JSON.stringify(error)))
 
 
 async function init(webengineMode) {
@@ -100,6 +102,10 @@ async function init(webengineMode) {
     xapi.Config.WebEngine.Mode.set('On');
   }
 
+  const touchController = await checkForControllers();
+  if (!touchController) {
+    return;
+  }
 
   xapi.Config.WebEngine.Features.AllowDeviceCertificate.set('True')
 
@@ -116,19 +122,44 @@ async function init(webengineMode) {
   xapi.Event.UserInterface.Extensions.Event.PageClosed.on(event => {
     if (!event.PageId.startsWith(config.panelId)) return;
     if (openingWebview) return;
-    console.log('Panel Closed - cleaning up')
-    closeWebview();
-    createPanel();
-    deleteAccount();
+
+    xapi.Status.SystemUnit.State.NumberOfActiveCalls.get()
+      .then(value => {
+        if (value == 1) return;
+        console.log('Panel Closed - cleaning up')
+        closeWebview();
+        createPanel();
+        deleteAccount();
+      })
   })
 
   xapi.Event.UserInterface.Extensions.Event.PageOpened.on(event => {
     if (!event.PageId.startsWith(config.panelId)) return;
     console.log('Panel Opened')
-    createPanel();
+    //createPanel();
   })
 
-  xapi.Status.UserInterface.WebView.on(processWebViews)
+  xapi.Status.UserInterface.WebView.on(processWebViews);
+
+  xapi.Status.Audio.Volume.on(value => {
+
+    console.log('Volume', value)
+    if (integrationViews.length == 0) return;
+
+    xapi.Status.UserInterface.Extensions.Widget.get()
+      .then(widgets => {
+
+        widgets.forEach(widget => {
+          if (widget.WidgetId != config.panelId + '-volumeSlider') return;
+          xapi.Command.UserInterface.Extensions.Widget.SetValue(
+            { Value: value, WidgetId: value });
+        })
+        console.log(widgets)
+      })
+
+    console.log('Volume', value)
+
+  });
 }
 
 function createAccount(password) {
@@ -145,15 +176,21 @@ function createAccount(password) {
     .catch(error => console.warn('Error creating user:', JSON.stringify(error)))
 }
 
-function deleteAccount(){
+function deleteAccount() {
   console.log(`Deleting user [${config.username}]`)
   return xapi.Command.UserManagement.User.Delete({ Username: config.username })
-      .then(result => {
-        console.log(`[${config.username}] delete status:`, result.status);
-      })
-      .catch(error => {
-        console.log(`Error deleting user [${config.username}]:`, JSON.stringify(error));
-      })
+    .then(result => {
+      console.log(`[${config.username}] delete status:`, result.status);
+    })
+    .catch(error => {
+      console.log('Error caught')
+      if (!error.message.endsWith('does not exist')) {
+        console.warning(`Error deleting user [${config.username}]:`, JSON.stringify(error));
+      } else {
+        console.log(error.message);
+      }
+
+    })
 }
 
 function createPassword(length) {
@@ -190,14 +227,14 @@ async function openWebview(content) {
 
   if (content.controls != 'duplicate' && content.controls != 'webview') {
     console.log("not duplicate or webview, setting timer", content.controls)
-    setTimeout(()=>{
-        openingWebview = false
-      },500)
+    setTimeout(() => {
+      openingWebview = false
+    }, 500)
     return;
   }
   console.log(`Opening [${content.title}] on [Controller]`);
-  
-  let url = (content.controls === 'duplicate') ? content.url : content.navUrl ;
+
+  let url = (content.controls === 'duplicate') ? content.url : content.navUrl;
 
 
   xapi.Command.UserInterface.WebView.Display({
@@ -206,11 +243,11 @@ async function openWebview(content) {
     Target: 'Controller',
     Url: url + "#" + hash
   })
-    .then(result => { 
+    .then(result => {
       console.log('Webview opened on [Controller] ', JSON.stringify(result))
-      setTimeout(()=>{
+      setTimeout(() => {
         openingWebview = false
-      },500)
+      }, 500)
     })
     .catch(e => console.log('Error: ' + e.message))
 
@@ -239,31 +276,56 @@ async function processWidget(e) {
       closeWebview();
       createPanel();
       break;
+    case 'playcontrols':
+      if(option=='toggleMute'){
+        if (e.Type != 'clicked') return
+        const muteStatus = await xapi.Status.Audio.VolumeMute.get()
+      if (muteStatus == 'On') {
+        xapi.Command.Audio.Microphones.Unmute();
+      } else {
+        xapi.Command.Audio.Microphones.Mute();
+      }
+
+
+
+      }else if(option=='volumeSlider'){
+        if (e.Type != 'released') return
+
+      }
+      
+      break;
   }
 }
 
-async function processWebViews(event){
+async function processWebViews(event) {
   console.log('WebView Status Change: ', JSON.stringify(event))
-  if( event.hasOwnProperty('Status') && event.hasOwnProperty('Type')) {
-    if(event.Status !== 'Visible' || event.Type !== 'Integration') return;
-    if(!openWebview) return;
-    console.log(`Recording Integration WebView id [${event.id}]` )
+  if (event.hasOwnProperty('Status') && event.hasOwnProperty('Type')) {
+    if (event.Status !== 'Visible' || event.Type !== 'Integration') return;
+    if (!openWebview) return;
+    console.log(`Recording Integration WebView id [${event.id}]`)
     integrationViews.push(event)
-  } else if ( event.hasOwnProperty('Status')) {
-    if(event.Status === 'NotVisible' || event.Status === 'Error'){
-       const result = integrationViews.findIndex(webview => webview.id === event.id)
-       if(result === -1) return;
-       console.log(`Integration WebView id [${event.id}] changed to [${event.Status}] - closing all Integration WebViews`)
-       closeWebview();
-       integrationViews = [];
-       deleteAccount();
+  } else if (event.hasOwnProperty('Status')) {
+    if (event.Status === 'NotVisible' || event.Status === 'Error') {
+      const result = integrationViews.findIndex(webview => webview.id === event.id)
+      if (result === -1) return;
+
+      xapi.Status.SystemUnit.State.NumberOfActiveCalls.get()
+        .then(value => {
+          if (value == 1) return;
+          console.log(`Integration WebView id [${event.id}] changed to [${event.Status}] - closing all Integration WebViews`)
+          closeWebview();
+          integrationViews = [];
+          deleteAccount();
+
+        })
+
     }
-  } else if( event.hasOwnProperty('ghost')){
+  } else if (event.hasOwnProperty('ghost')) {
     const result = integrationViews.findIndex(webview => webview.id === event.id)
-       if(result === -1) return;
-       console.log(`Integration WebView id [${event.id}] ghosted - closing all Integration WebViews`)
-       closeWebview();
-       integrationViews = [];
+    if (result === -1) return;
+    console.log(`Integration WebView id [${event.id}] ghosted - closing all Integration WebViews`)
+    closeWebview();
+    integrationViews = [];
   }
 
 }
@@ -290,11 +352,11 @@ function checkForControllers() {
     })
 }
 
-function deletePanel(){
+function deletePanel() {
 
 }
 
-function createPanel(state) {
+async function createPanel(state) {
   const button = config.button;
   const content = config.content;
   const panelId = config.panelId
@@ -320,6 +382,8 @@ function createPanel(state) {
     rows = rows.concat(row(widget('close', 'Button', 'Close Content', 'size=2')))
 
     switch (state) {
+      case 'blank':
+        break;
       case 'accelerate':
         rows = rows.concat(row(widget('instructions', 'Text', 'Hold the button to accelarate up', 'size=4;align=center')))
         rows = rows.concat(row(widget('accelerate', 'Button', 'Hold the button to accelarate up', 'size=3')))
@@ -332,10 +396,14 @@ function createPanel(state) {
         rows = rows.concat(row(widget('title', 'Text', 'Playback Controls', 'size=4;fontSize=normal;align=center')))
         rows = rows.concat(row(widget('playTime', 'Text', 'Loading...', 'size=2;fontSize=normal;align=center')))
         rows = rows.concat(row(widget('playcontrols-slider', 'Slider', '', 'size=4')))
-        rows = rows.concat(row([widget('playcontrols-fastback', 'Button', '', 'size=1;icon=fast_bw'),
-        widget('playcontrols-playpause', 'Button', '', 'size=1;icon=play_pause'),
-        widget('playcontrols-stop', 'Button', '', 'size=1;icon=stop'),
-        widget('playcontrols-fastforward', 'Button', '', 'size=1;icon=fast_fw')]))
+        rows = rows.concat(row([
+          widget('playcontrols-playpause', 'Button', '', 'size=1;icon=play_pause'),
+          widget('playcontrols-stop', 'Button', '', 'size=1;icon=stop'),
+          widget('playcontrols-fastback', 'Button', '', 'size=1;icon=fast_bw'),
+          widget('playcontrols-fastforward', 'Button', '', 'size=1;icon=fast_fw')]))
+        rows = rows.concat(row([
+          widget('playcontrols-toggleMute', 'Button', '', 'size=1;icon=volume_muted'),
+          widget('playcontrols-volumeSlider', 'Slider', '', 'size=3')]))
         break;
     }
   } else {
@@ -349,6 +417,11 @@ function createPanel(state) {
     }
   }
 
+  let order = '';
+  const orderNum = await panelOrder(config.panelId);
+  if (orderNum != -1) order = `<Order>${orderNum}</Order>`
+
+
   const panel = `
     <Extensions><Panel>
       <Location>${button.showInCall ? 'HomeScreenAndCallControls' : 'HomeScreen'}</Location>
@@ -356,6 +429,7 @@ function createPanel(state) {
       <Icon>${button.icon}</Icon>
       <Color>${button.color}</Color>
       <Name>${button.name}</Name>
+      ${order}
       <ActivityType>Custom</ActivityType>
       <Page>
         <Name>${pageName}</Name>
@@ -366,4 +440,15 @@ function createPanel(state) {
     </Panel></Extensions>`;
 
   return xapi.Command.UserInterface.Extensions.Panel.Save({ PanelId: panelId }, panel);
-} 
+}
+
+async function panelOrder(panelId) {
+  const list = await xapi.Command.UserInterface.Extensions.List({ ActivityType: 'Custom' });
+  if(!list.hasOwnProperty('Extensions')) return -1
+  if (!list.Extensions.hasOwnProperty('Panel')) return -1
+  if (list.Extensions.Panel.length == 0) return -1
+  for (let i = 0; i < list.Extensions.Panel.length; i++) {
+    if (list.Extensions.Panel[i].PanelId == panelId) return list.Extensions.Panel[i].Order;
+  }
+  return -1
+}
