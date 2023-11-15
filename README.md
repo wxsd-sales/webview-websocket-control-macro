@@ -2,7 +2,7 @@
 
 This is an example Webex Device macro which lets you control a WebView Web App on your Webex Device from an in room touch controller.
 
-![image](https://github.com/wxsd-sales/webview-websocket-control-macro/assets/21026209/ed64db52-4658-4963-a692-50d54e399f6a)
+![download](https://github.com/wxsd-sales/webview-websocket-control-macro/assets/21026209/c6822c1a-4800-4a1c-9c41-b6bab9511a23)
 
 
 ## Overview
@@ -11,9 +11,9 @@ The macro demos how you connect your Web App to a Webex Device and control it fr
 
 Demo WebApps:
 
-* Blocky Bird: Simple one button game which shows a single UI Extension button controlling the character
 * Tetris: The classic tetris controlled using a UI Extension Navigation Widget
-* YouTube: Embedded YouTube player with UI Extension playback controls
+* YouTube: Embedded YouTube player with UI Extension playback controls and another example using a second WebView on the Navigator as the playback controls
+* Vimeo: Embedded YouTube player with UI Extension playback controls
 * Whiteboard: Simply whiteboard Web App which mirrors drawings on the Room Navigator and the Webex Devices main display
 
 > :warning: **Note:**
