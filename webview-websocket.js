@@ -277,22 +277,15 @@ async function processWidget(e) {
       createPanel();
       break;
     case 'playcontrols':
-      if(option=='toggleMute'){
+      if (option == 'toggleMute') {
         if (e.Type != 'clicked') return
-        const muteStatus = await xapi.Status.Audio.VolumeMute.get()
-      if (muteStatus == 'On') {
-        xapi.Command.Audio.Microphones.Unmute();
-      } else {
-        xapi.Command.Audio.Microphones.Mute();
-      }
-
-
-
-      }else if(option=='volumeSlider'){
+        xapi.Command.Audio.Volume.ToggleMute();
+      } else if (option == 'volumeSlider') {
         if (e.Type != 'released') return
-
+        const newVolume = mapBetween(parseInt(e.Value),0,100,0,255)
+        console.log('Setting Volume to:', newVolume)
+        xapi.Command.Audio.Volume.Set({ Level: newVolume });
       }
-      
       break;
   }
 }
@@ -352,8 +345,11 @@ function checkForControllers() {
     })
 }
 
-function deletePanel() {
-
+function mapBetween(currentNum, minAllowed, maxAllowed, min, max) {
+  return Math.round(
+    ((maxAllowed - minAllowed) * (currentNum - min)) / (max - min) +
+    minAllowed
+  );
 }
 
 async function createPanel(state) {
@@ -444,7 +440,7 @@ async function createPanel(state) {
 
 async function panelOrder(panelId) {
   const list = await xapi.Command.UserInterface.Extensions.List({ ActivityType: 'Custom' });
-  if(!list.hasOwnProperty('Extensions')) return -1
+  if (!list.hasOwnProperty('Extensions')) return -1
   if (!list.Extensions.hasOwnProperty('Panel')) return -1
   if (list.Extensions.Panel.length == 0) return -1
   for (let i = 0; i < list.Extensions.Panel.length; i++) {
