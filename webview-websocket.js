@@ -102,10 +102,10 @@ async function init(webengineMode) {
     xapi.Config.WebEngine.Mode.set('On');
   }
 
-  const touchController = await checkForControllers();
-  if (!touchController) {
-    return;
-  }
+  // const touchController = await checkForControllers();
+  // if (!touchController) {
+  //   return;
+  // }
 
   xapi.Config.WebEngine.Features.AllowDeviceCertificate.set('True')
 
